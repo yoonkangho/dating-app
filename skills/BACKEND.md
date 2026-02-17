@@ -17,145 +17,66 @@ Best practices for developing Kotlin backend applications with Spring Boot.
 
 ## Spring Boot Patterns
 
-### Constructor Injection (Only Way)
+- **Constructor injection only** — no `@Autowired`, no `lateinit`, no field injection
+- **Repositories** — see `skills/DATABASE.md` for Spring Data JPA patterns
 
-```kotlin
-// ✅ Good — constructor injection, immutable dependencies
-@Service
-class MatchingService(
-    private val userRepository: UserRepository,
-    private val okRepository: OkRepository,
-    private val eventPublisher: ApplicationEventPublisher
-) {
-    // ...
-}
+### Service Layer
 
-// ❌ Avoid — field injection
-@Service
-class MatchingService {
-    @Autowired
-    private lateinit var userRepository: UserRepository  // Bad
-}
-```
-
-### Repository Pattern
-
-```kotlin
-// ✅ Good — Spring Data JPA with Kotlin-friendly methods
-interface UserRepository : JpaRepository<User, UUID> {
-    fun findByEmail(email: String): User?
-    fun findByStatus(status: UserStatus): List<User>
-    fun existsByEmail(email: String): Boolean
-    
-    // Custom query when needed
-    @Query("SELECT u FROM User u WHERE u.status = :status AND u.waitlistReleasedAt IS NOT NULL")
-    fun findReleasedFromWaitlist(@Param("status") status: UserStatus): List<User>
-}
-```
-
-### Service Layer Structure
+- Services orchestrate use cases with `@Transactional`
+- Inject `Clock` for testable time-dependent logic
+- Use sealed result types for expected outcomes (not exceptions)
+- Private helpers for validation and creation logic
 
 ```kotlin
 @Service
 class MatchingService(
-    private val userRepository: UserRepository,
     private val okRepository: OkRepository,
-    private val clock: Clock  // Inject for testability
+    private val clock: Clock
 ) {
-    // Public API — orchestrates the use case
     @Transactional
     fun sendOk(senderId: UUID, recipientId: UUID): OkResult {
-        val sender = userRepository.findByIdOrNull(senderId)
-            ?: return OkResult.SenderNotFound
-        val recipient = userRepository.findByIdOrNull(recipientId)
-            ?: return OkResult.RecipientNotFound
-        
-        return when (val validation = validateOk(sender, recipient)) {
-            is ValidationResult.Valid -> {
-                val ok = createAndSaveOk(sender, recipient)
-                OkResult.Success(ok)
-            }
-            is ValidationResult.Invalid -> OkResult.ValidationFailed(validation.reason)
-        }
-    }
-    
-    // Private helpers — single responsibility
-    private fun validateOk(sender: User, recipient: User): ValidationResult {
-        // validation logic
-    }
-    
-    private fun createAndSaveOk(sender: User, recipient: User): Ok {
-        // creation logic
+        // ... validate, create, publish event ...
     }
 }
 
 // Result type — no exceptions for expected outcomes
 sealed class OkResult {
     data class Success(val ok: Ok) : OkResult()
-    object SenderNotFound : OkResult()
-    object RecipientNotFound : OkResult()
+    data object SenderNotFound : OkResult()
+    data object RecipientNotFound : OkResult()
     data class ValidationFailed(val reason: String) : OkResult()
 }
 ```
 
 ### Controller Layer
 
+- Controllers only map requests to service calls and results to responses
+- Use `@Valid @RequestBody` for input validation
+- Map sealed result types to `ResponseEntity` with exhaustive `when`
+- Always use DTOs — never return entities
+
 ```kotlin
 @RestController
 @RequestMapping("/api/v1/oks")
-class OkController(
-    private val matchingService: MatchingService
-) {
+class OkController(private val matchingService: MatchingService) {
     @PostMapping
     fun sendOk(
         @AuthenticationPrincipal user: UserPrincipal,
         @Valid @RequestBody request: SendOkRequest
-    ): ResponseEntity<Any> {
-        return when (val result = matchingService.sendOk(user.id, request.recipientId)) {
-            is OkResult.Success -> ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(OkResponse.from(result.ok))
-            is OkResult.SenderNotFound -> ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .build()
-            is OkResult.RecipientNotFound -> ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ErrorResponse("Recipient not found"))
-            is OkResult.ValidationFailed -> ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse(result.reason))
-        }
-    }
-}
-
-// Request/Response DTOs
-data class SendOkRequest(
-    @field:NotNull
-    val recipientId: UUID
-)
-
-data class OkResponse(
-    val id: UUID,
-    val recipientId: UUID,
-    val sentAt: Instant,
-    val expiresAt: Instant
-) {
-    companion object {
-        fun from(ok: Ok) = OkResponse(
-            id = ok.id,
-            recipientId = ok.recipientId,
-            sentAt = ok.sentAt,
-            expiresAt = ok.expiresAt
-        )
+    ): ResponseEntity<Any> = when (val result = matchingService.sendOk(user.id, request.recipientId)) {
+        is OkResult.Success -> ResponseEntity.status(CREATED).body(OkResponse.from(result.ok))
+        is OkResult.SenderNotFound -> ResponseEntity.status(UNAUTHORIZED).build()
+        is OkResult.RecipientNotFound -> ResponseEntity.status(NOT_FOUND).body(ErrorResponse("Recipient not found"))
+        is OkResult.ValidationFailed -> ResponseEntity.badRequest().body(ErrorResponse(result.reason))
     }
 }
 ```
 
+**DTOs:** Use data classes with `@field:NotNull` for validation. Add `companion object { fun from(entity) }` factory methods for response mapping.
+
 ---
 
 ## JPA Entities
-
-### Entity Structure
 
 ```kotlin
 @Entity
@@ -163,103 +84,50 @@ data class OkResponse(
 class User(
     @Id
     val id: UUID = UUID.randomUUID(),
-    
+
     @Column(nullable = false, unique = true)
     val email: String,
-    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: UserStatus = UserStatus.VerificationPending,
-    
+
     @Column(nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
-    
+
     @Column
     var updatedAt: Instant? = null
 ) {
-    // Business methods on entity when appropriate
+    // Business methods on entity
     fun activate() {
         require(status == UserStatus.ReviewPending) { "Can only activate from ReviewPending" }
         status = UserStatus.Active
         updatedAt = Instant.now()
     }
-    
-    // equals/hashCode based on id only for JPA
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is User) return false
-        return id == other.id
-    }
-    
-    override fun hashCode(): Int = id.hashCode()
+
+    // equals/hashCode based on id only (required for JPA)
+    override fun equals(other: Any?) = this === other || (other is User && id == other.id)
+    override fun hashCode() = id.hashCode()
 }
 ```
 
-### Relationships
-
-```kotlin
-@Entity
-@Table(name = "oks")
-class Ok(
-    @Id
-    val id: UUID = UUID.randomUUID(),
-    
-    // Many-to-one: use lazy loading
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id", nullable = false)
-    val sender: User,
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_id", nullable = false)
-    val recipient: User,
-    
-    @Enumerated(EnumType.STRING)
-    var status: OkStatus = OkStatus.Pending,
-    
-    val sentAt: Instant = Instant.now(),
-    val expiresAt: Instant = sentAt.plus(Duration.ofDays(7))
-)
-
-// For one-to-many, prefer querying from repository over entity collections
-// Avoids N+1 and large collection loading issues
-```
-
-### Avoid Common JPA Pitfalls
-
-```kotlin
-// ❌ Avoid — bidirectional relationships unless necessary
-@OneToMany(mappedBy = "sender")
-val sentOks: MutableList<Ok> = mutableListOf()  // Often causes issues
-
-// ✅ Better — query when needed
-interface OkRepository : JpaRepository<Ok, UUID> {
-    fun findBySenderId(senderId: UUID): List<Ok>
-    fun countBySenderIdAndStatus(senderId: UUID, status: OkStatus): Int
-}
-
-// ❌ Avoid — entity in API response (lazy loading, circular refs)
-@GetMapping("/{id}")
-fun getUser(@PathVariable id: UUID): User  // Bad
-
-// ✅ Good — map to DTO
-@GetMapping("/{id}")
-fun getUser(@PathVariable id: UUID): UserResponse
-```
+**JPA rules:**
+- `@ManyToOne(fetch = FetchType.LAZY)` always — never EAGER
+- Avoid `@OneToMany` on entities — query from repository instead (prevents N+1)
+- Never return entities from controllers — always map to DTOs
+- See `skills/DATABASE.md` for relationship mapping and query patterns
 
 ---
 
 ## Spring Modulith
 
-### Module Structure
-
-Each module is a package under the root. Public API is in the package root; internal classes go in subpackages.
+Public API in package root; internal classes in `internal/` subpackage.
 
 ```
 com.kenneth.datingapp.matching/
 ├── MatchingService.kt          # Public API
 ├── OkResponse.kt               # Public DTO
 ├── internal/                   # Not accessible from other modules
-│   ├── OkEntity.kt
 │   ├── OkRepository.kt
 │   └── MatchingConfig.kt
 └── events/                     # Published events (public)
@@ -269,80 +137,29 @@ com.kenneth.datingapp.matching/
 ### Cross-Module Communication via Events
 
 ```kotlin
-// In matching module — publish event
-@Service
-class MatchingService(
-    private val eventPublisher: ApplicationEventPublisher
-) {
-    @Transactional
-    fun sendOk(senderId: UUID, recipientId: UUID): OkResult {
-        // ... create ok ...
-        
-        eventPublisher.publishEvent(OkSentEvent(
-            okId = ok.id,
-            senderId = senderId,
-            recipientId = recipientId
-        ))
-        
-        return OkResult.Success(ok)
-    }
-}
+// Publisher — in source module
+eventPublisher.publishEvent(OkSentEvent(okId = ok.id, senderId = senderId, recipientId = recipientId))
 
-// Event class — in matching.events package (public)
-data class OkSentEvent(
-    val okId: UUID,
-    val senderId: UUID,
-    val recipientId: UUID
-)
+// Event — in source module's events/ package (public)
+data class OkSentEvent(val okId: UUID, val senderId: UUID, val recipientId: UUID)
 
-// In notification module — listen to event
-@Service
-class NotificationService {
-    @ApplicationModuleListener
-    fun onOkSent(event: OkSentEvent) {
-        // Send push notification to recipient
-    }
-}
+// Listener — in consuming module
+@ApplicationModuleListener
+fun onOkSent(event: OkSentEvent) { /* handle */ }
 ```
-
----
-
-## Testing
-
-See `skills/TESTING.md` for all testing patterns, fixtures, and conventions.
 
 ---
 
 ## Error Handling
 
-### Use Result Types for Expected Failures
+- **Expected failures** → sealed result types (see Service Layer above)
+- **Unexpected failures** → exceptions (bugs, infrastructure issues)
 
 ```kotlin
-// ✅ Good — expected outcomes as sealed class
-sealed class CreateUserResult {
-    data class Success(val user: User) : CreateUserResult()
-    object EmailAlreadyExists : CreateUserResult()
-    data class ValidationError(val errors: List<String>) : CreateUserResult()
-}
-
-// ❌ Avoid — exceptions for expected cases
-fun createUser(email: String): User {
-    if (userRepository.existsByEmail(email)) {
-        throw EmailAlreadyExistsException(email)  // Don't do this
-    }
-}
-```
-
-### Exceptions for Unexpected Failures
-
-```kotlin
-// ✅ Good — exceptions for bugs/infrastructure issues
 class UserNotFoundException(id: UUID) : RuntimeException("User not found: $id")
 
-// Use when the caller made a programming error or something unexpected happened
-fun getUser(id: UUID): User = 
-    userRepository.findByIdOrNull(id) 
-        ?: throw UserNotFoundException(id)
+fun getUser(id: UUID): User =
+    userRepository.findByIdOrNull(id) ?: throw UserNotFoundException(id)
 ```
 
 ### Global Exception Handler
@@ -355,7 +172,7 @@ class GlobalExceptionHandler {
         val errors = ex.bindingResult.fieldErrors.map { "${it.field}: ${it.defaultMessage}" }
         return ResponseEntity.badRequest().body(ErrorResponse(errors.joinToString(", ")))
     }
-    
+
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(ex: Exception): ResponseEntity<ErrorResponse> {
         logger.error("Unexpected error", ex)
@@ -370,8 +187,6 @@ data class ErrorResponse(val message: String)
 
 ## Configuration
 
-### Use @ConfigurationProperties
-
 ```kotlin
 @ConfigurationProperties(prefix = "app.matching")
 data class MatchingProperties(
@@ -380,24 +195,12 @@ data class MatchingProperties(
     val proposalDeadlineHours: Long = 48
 )
 
-// Enable in main class or config
-@EnableConfigurationProperties(MatchingProperties::class)
-
-// Use in service
-@Service
-class MatchingService(
-    private val properties: MatchingProperties
-) {
-    fun createOk(): Ok {
-        val expiresAt = Instant.now().plus(Duration.ofDays(properties.okExpirationDays))
-        // ...
-    }
-}
+// Enable with @EnableConfigurationProperties(MatchingProperties::class)
+// Inject directly into services via constructor
 ```
 
-### application.yml structure
-
 ```yaml
+# application.yml
 app:
   matching:
     ok-expiration-days: 7
@@ -412,13 +215,18 @@ app:
 
 ---
 
-## Common Pitfalls to Avoid
+## Testing
 
-1. **Don't use `lateinit` for dependencies** — Use constructor injection
-2. **Don't return entities from controllers** — Always map to DTOs
-3. **Don't use `@Autowired` on fields** — Constructor injection only
-4. **Don't catch generic exceptions silently** — Log and handle appropriately
-5. **Don't use mutable collections in data classes** — Prefer immutable
-6. **Don't forget `@Transactional` on service methods** — When DB operations need atomicity
-7. **Don't use `FetchType.EAGER`** — Default to LAZY, fetch explicitly when needed
-8. **Don't put business logic in controllers** — Controllers only map requests/responses
+See `skills/TESTING.md` for all testing patterns, fixtures, and conventions.
+
+---
+
+## Common Pitfalls
+
+1. **No `lateinit` or `@Autowired`** — constructor injection only
+2. **No entities in API responses** — always map to DTOs
+3. **No silent exception swallowing** — log and handle appropriately
+4. **No mutable collections in data classes** — prefer immutable
+5. **No missing `@Transactional`** — required when DB operations need atomicity
+6. **No `FetchType.EAGER`** — default to LAZY, fetch explicitly when needed
+7. **No business logic in controllers** — controllers only map requests/responses
