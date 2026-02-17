@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: DatingApp
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydatabase
+    username: myuser
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  flyway:
+    enabled: false # TODO: enable once Flyway migrations exist
+    locations: classpath:db/migration
+
+  jpa:
+    hibernate:
+      ddl-auto: none # TODO: set to validate once Flyway migrations exist
+    open-in-view: false
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+app:
+  matching:
+    ok-expiration-days: 7
+    max-active-oks: 3
+    proposal-deadline-hours: 48
+  meeting:
+    max-weeks-from-match: 3
+    reschedule-limit: 1
+    finalization-deadline-hours: 48
+  feedback:
+    prompt-delay-hours: 3
