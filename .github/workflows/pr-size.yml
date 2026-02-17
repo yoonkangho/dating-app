@@ -1,0 +1,177 @@
+name: PR Size Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-size:
+    name: Check PR Size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze PR size
+        id: size
+        run: |
+          git fetch origin main
+          
+          # Count changed files
+          FILES_CHANGED=$(git diff --name-only origin/main...HEAD | wc -l)
+          
+          # Count lines added/removed
+          STATS=$(git diff --shortstat origin/main...HEAD)
+          INSERTIONS=$(echo "$STATS" | grep -oP '\d+(?= insertion)' || echo "0")
+          DELETIONS=$(echo "$STATS" | grep -oP '\d+(?= deletion)' || echo "0")
+          TOTAL_LINES=$((INSERTIONS + DELETIONS))
+          
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_changed=$TOTAL_LINES" >> $GITHUB_OUTPUT
+          echo "insertions=$INSERTIONS" >> $GITHUB_OUTPUT
+          echo "deletions=$DELETIONS" >> $GITHUB_OUTPUT
+          
+          # Determine size category
+          if [ "$TOTAL_LINES" -lt 100 ]; then
+            echo "size=XS" >> $GITHUB_OUTPUT
+            echo "label=size/XS" >> $GITHUB_OUTPUT
+          elif [ "$TOTAL_LINES" -lt 250 ]; then
+            echo "size=S" >> $GITHUB_OUTPUT
+            echo "label=size/S" >> $GITHUB_OUTPUT
+          elif [ "$TOTAL_LINES" -lt 500 ]; then
+            echo "size=M" >> $GITHUB_OUTPUT
+            echo "label=size/M" >> $GITHUB_OUTPUT
+          elif [ "$TOTAL_LINES" -lt 1000 ]; then
+            echo "size=L" >> $GITHUB_OUTPUT
+            echo "label=size/L" >> $GITHUB_OUTPUT
+          else
+            echo "size=XL" >> $GITHUB_OUTPUT
+            echo "label=size/XL" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add size label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ steps.size.outputs.label }}';
+            const allSizeLabels = ['size/XS', 'size/S', 'size/M', 'size/L', 'size/XL'];
+            
+            // Remove existing size labels
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            for (const label of labels) {
+              if (allSizeLabels.includes(label.name) && label.name !== size) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label.name
+                });
+              }
+            }
+            
+            // Add current size label
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: [size]
+              });
+            } catch (e) {
+              // Label might not exist, create it
+              const colors = {
+                'size/XS': '3CBF00',
+                'size/S': '5D9801',
+                'size/M': 'FBCA04',
+                'size/L': 'E99695',
+                'size/XL': 'D93F0B'
+              };
+              
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: size,
+                  color: colors[size]
+                });
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: [size]
+                });
+              } catch (e2) {
+                console.log('Could not create/add label:', e2);
+              }
+            }
+
+      - name: Comment on large PRs
+        if: steps.size.outputs.size == 'L' || steps.size.outputs.size == 'XL'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ steps.size.outputs.size }}';
+            const files = '${{ steps.size.outputs.files_changed }}';
+            const lines = '${{ steps.size.outputs.lines_changed }}';
+            const insertions = '${{ steps.size.outputs.insertions }}';
+            const deletions = '${{ steps.size.outputs.deletions }}';
+            
+            const body = `## ⚠️ Large PR Warning
+            
+            This PR is **size ${size}** which may be difficult to review effectively.
+            
+            | Metric | Count |
+            |--------|-------|
+            | Files changed | ${files} |
+            | Lines added | +${insertions} |
+            | Lines removed | -${deletions} |
+            | **Total changes** | **${lines}** |
+            
+            ### Trunk-Based Development Recommendation
+            
+            For easier reviews and faster integration, consider:
+            - Breaking this into smaller, focused PRs
+            - Each PR should ideally be < 250 lines
+            - Smaller PRs get reviewed faster and have fewer bugs
+            
+            > "If it hurts, do it more frequently, and bring the pain forward." - Continuous Delivery`;
+            
+            // Check if we already commented
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const existingComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('Large PR Warning')
+            );
+            
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
