@@ -1,0 +1,36 @@
+name: Bug
+description: Report a bug to fix
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Call POST /api/users/register
+        2. With payload { "email": "invalid" }
+        3. See error...
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Error logs, screenshots, etc.

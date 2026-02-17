@@ -1,0 +1,62 @@
+name: Task
+description: A task that can be assigned to a Claude Code session
+title: "[Task] "
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Create small, focused tasks that can be completed in a single Claude Code session (ideally < 250 lines of code).
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done?
+      placeholder: Implement user registration endpoint with email validation
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this is done?
+      placeholder: |
+        - [ ] Endpoint accepts POST /api/users/register
+        - [ ] Validates email format
+        - [ ] Returns 201 on success
+        - [ ] Unit tests pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files Likely Affected
+      description: Which files will probably need changes?
+      placeholder: |
+        - src/main/kotlin/com/kenneth/datingapp/user/UserController.kt
+        - src/main/kotlin/com/kenneth/datingapp/user/UserService.kt
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Estimated Size
+      description: How big is this task?
+      options:
+        - XS (< 50 lines)
+        - S (50-100 lines)
+        - M (100-250 lines)
+        - L (250-500 lines) - consider breaking down
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context for Claude
+      description: Any additional context that would help Claude Code understand this task?
+      placeholder: |
+        Related to the user registration flow in STATE-MACHINES.md
+        Should follow patterns in existing UserService
