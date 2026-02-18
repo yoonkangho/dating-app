@@ -14,12 +14,12 @@ spring:
       port: 6379
 
   flyway:
-    enabled: false # TODO: enable once Flyway migrations exist
+    enabled: true
     locations: classpath:db/migration
 
   jpa:
     hibernate:
-      ddl-auto: none # TODO: set to validate once Flyway migrations exist
+      ddl-auto: none # TODO: set to validate once all module migrations exist
     open-in-view: false
 
   jackson:
