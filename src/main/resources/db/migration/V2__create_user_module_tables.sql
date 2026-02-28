@@ -34,15 +34,13 @@ CREATE TABLE profiles (
     has_let_ok_expire  BOOLEAN NOT NULL DEFAULT false,
 
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at     TIMESTAMPTZ,
-
-    CONSTRAINT uq_profiles_user_id UNIQUE (user_id)
+    updated_at     TIMESTAMPTZ
 );
 
 CREATE UNIQUE INDEX idx_profiles_user_id       ON profiles (user_id);
--- Note: filtering for active users must be done via JOIN in queries;
+-- Note: active-user filtering is done via JOIN at query time;
 -- PostgreSQL does not allow subqueries in partial index predicates.
-CREATE        INDEX idx_profiles_gender_active ON profiles (gender);
+CREATE        INDEX idx_profiles_gender        ON profiles (gender);
 
 CREATE TRIGGER trg_profiles_updated_at
     BEFORE UPDATE ON profiles
