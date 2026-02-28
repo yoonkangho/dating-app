@@ -18,6 +18,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
             - Check for small, focused changes
             - Verify code quality and test coverage
             - Suggest improvements if needed
-            
+
             Comment: ${{ github.event.comment.body }}
 
   claude-review-thread:
@@ -45,6 +46,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
