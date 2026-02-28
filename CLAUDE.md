@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-The primary focus of this project is to learn how to better use AI in software development with latest best practices on using AI agents.
-Give feedback to the user on what would have been a better prompt that a master of Claude Code would have used instead.
+The primary focus of this project is
+- to learn how to better use AI in software development
+- to get hands-on experience in establishing and maintaining simple, production-grade service
 
 ## Documentation Reference
 
