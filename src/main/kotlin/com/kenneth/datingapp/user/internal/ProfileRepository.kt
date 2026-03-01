@@ -20,11 +20,11 @@ interface ProfileRepository : JpaRepository<Profile, UUID> {
         JOIN p.user u
         WHERE u.status = :status
         AND p.gender = :gender
-        AND (:minBirthDate IS NULL OR p.birthDate <= :minBirthDate)
-        AND (:maxBirthDate IS NULL OR p.birthDate >= :maxBirthDate)
-        AND (:minHeight IS NULL OR p.heightCm >= :minHeight)
-        AND (:maxHeight IS NULL OR p.heightCm <= :maxHeight)
-        AND (:education IS NULL OR p.education = :education)
+        AND (CAST(:minBirthDate AS LocalDate) IS NULL OR p.birthDate <= :minBirthDate)
+        AND (CAST(:maxBirthDate AS LocalDate) IS NULL OR p.birthDate >= :maxBirthDate)
+        AND (CAST(:minHeight AS int) IS NULL OR p.heightCm >= :minHeight)
+        AND (CAST(:maxHeight AS int) IS NULL OR p.heightCm <= :maxHeight)
+        AND (CAST(:education AS string) IS NULL OR p.education = :education)
         ORDER BY p.createdAt DESC
     """)
     fun browse(
