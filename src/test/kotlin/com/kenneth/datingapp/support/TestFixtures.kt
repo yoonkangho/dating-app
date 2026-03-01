@@ -181,4 +181,30 @@ object TestFixtures {
         reportedUser = reportedUser,
         status = status
     )
+
+    fun createMeetingProposal(
+        id: UUID = UUID.randomUUID(),
+        meeting: Meeting,
+        proposedDate: Instant = Instant.now().plus(Duration.ofDays(7)),
+        proposedLocation: String = "Coffee Shop"
+    ) = MeetingProposal(
+        id = id,
+        meeting = meeting,
+        proposedDate = proposedDate,
+        proposedLocation = proposedLocation
+    )
+
+    fun createMeetingEvent(
+        id: UUID = UUID.randomUUID(),
+        meeting: Meeting,
+        eventType: MeetingEventType = MeetingEventType.PROPOSAL_SUBMITTED,
+        actor: User? = null,
+        details: Map<String, Any>? = null
+    ) = MeetingEvent(
+        id = id,
+        meeting = meeting,
+        eventType = eventType,
+        actor = actor,
+        details = details
+    )
 }
