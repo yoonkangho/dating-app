@@ -130,6 +130,57 @@ class ProfileRepositoryTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `browse applies multiple filters simultaneously`() {
+        // 4 active women with varying attributes
+        val user1 = userRepository.save(createUser(status = UserStatus.ACTIVE))
+        val user2 = userRepository.save(createUser(status = UserStatus.ACTIVE))
+        val user3 = userRepository.save(createUser(status = UserStatus.ACTIVE))
+        val user4 = userRepository.save(createUser(status = UserStatus.ACTIVE))
+        // Matches: age 30, height 170, MASTERS
+        profileRepository.save(createProfile(user = user1, gender = Gender.FEMALE, birthDate = LocalDate.of(1996, 1, 1), heightCm = 170, education = Education.MASTERS))
+        // Wrong height
+        profileRepository.save(createProfile(user = user2, gender = Gender.FEMALE, birthDate = LocalDate.of(1996, 1, 1), heightCm = 155, education = Education.MASTERS))
+        // Wrong education
+        profileRepository.save(createProfile(user = user3, gender = Gender.FEMALE, birthDate = LocalDate.of(1996, 1, 1), heightCm = 170, education = Education.BACHELORS))
+        // Wrong age (too young)
+        profileRepository.save(createProfile(user = user4, gender = Gender.FEMALE, birthDate = LocalDate.of(2001, 1, 1), heightCm = 170, education = Education.MASTERS))
+        flushAndClear()
+
+        val results = profileRepository.browse(
+            status = UserStatus.ACTIVE,
+            gender = Gender.FEMALE,
+            minBirthDate = LocalDate.of(1998, 3, 1),   // age >= 28
+            maxBirthDate = LocalDate.of(1990, 3, 1),   // age <= 36
+            minHeight = 165, maxHeight = 175,
+            education = Education.MASTERS,
+            pageable = PageRequest.of(0, 10)
+        )
+
+        assertThat(results.content).hasSize(1)
+        assertThat(results.content[0].heightCm).isEqualTo(170)
+        assertThat(results.content[0].education).isEqualTo(Education.MASTERS)
+    }
+
+    @Test
+    fun `browse returns empty page when no profiles match`() {
+        val user = userRepository.save(createUser(status = UserStatus.ACTIVE))
+        profileRepository.save(createProfile(user = user, gender = Gender.FEMALE, heightCm = 160))
+        flushAndClear()
+
+        val results = profileRepository.browse(
+            status = UserStatus.ACTIVE,
+            gender = Gender.FEMALE,
+            minBirthDate = null, maxBirthDate = null,
+            minHeight = 180, maxHeight = 190,
+            education = null,
+            pageable = PageRequest.of(0, 10)
+        )
+
+        assertThat(results.content).isEmpty()
+        assertThat(results.totalElements).isEqualTo(0)
+    }
+
+    @Test
     fun `browse paginates correctly`() {
         repeat(15) { i ->
             val user = userRepository.save(createUser(status = UserStatus.ACTIVE))
