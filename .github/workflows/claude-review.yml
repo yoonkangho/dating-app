@@ -31,7 +31,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: '--allowedTools "Bash(git diff:*)" "Bash(git log:*)" "Bash(git show:*)" "Bash(gh pr:*)" "Bash(gh api:*)"'
           prompt: |
-            Review this PR following trunk-based development practices:
+            Review this PR:
             - Check for small, focused changes
             - Verify code quality and test coverage
             - Suggest improvements if needed

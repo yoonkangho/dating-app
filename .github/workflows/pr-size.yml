@@ -139,14 +139,12 @@ jobs:
             | Lines removed | -${deletions} |
             | **Total changes** | **${lines}** |
             
-            ### Trunk-Based Development Recommendation
-            
+            ### Recommendation
+
             For easier reviews and faster integration, consider:
             - Breaking this into smaller, focused PRs
             - Each PR should ideally be < 250 lines
-            - Smaller PRs get reviewed faster and have fewer bugs
-            
-            > "If it hurts, do it more frequently, and bring the pain forward." - Continuous Delivery`;
+            - Smaller PRs get reviewed faster and have fewer bugs`;
             
             // Check if we already commented
             const { data: comments } = await github.rest.issues.listComments({

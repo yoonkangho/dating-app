@@ -1,6 +1,6 @@
-# Branch Protection Settings for Trunk-Based Development
+# Branch Protection Settings (GitHub Flow)
 
-To fully enforce trunk-based development, configure these branch protection rules in GitHub:
+Configure these branch protection rules to enforce the GitHub Flow workflow.
 
 ## Settings for `main` branch
 
@@ -13,14 +13,11 @@ Go to: **Settings → Branches → Add branch protection rule**
   - ❌ Dismiss stale pull request approvals when new commits are pushed
   - ❌ Require review from Code Owners
 
-### Merge Settings  
+### Merge Settings
 - ✅ **Require status checks to pass before merging**
   - ✅ Require branches to be up to date before merging
   - Required status checks:
-    - `Enforce Trunk-Based Development`
     - `Build and Test`
-
-- ✅ **Require linear history** ← This enforces fast-forward merges only!
 
 ### Additional Recommended Settings
 - ✅ **Do not allow bypassing the above settings**
@@ -33,16 +30,16 @@ Go to: **Settings → Branches → Add branch protection rule**
 Go to: **Settings → General → Pull Requests**
 
 - ❌ Allow merge commits
-- ❌ Allow squash merging (optional - some teams prefer this)
-- ✅ **Allow rebase merging** ← This is the fast-forward merge!
+- ✅ **Allow squash merging** ← Cleans up branch commits into a single commit
+- ✅ **Allow rebase merging** ← Preserves individual commits with linear history
 - ✅ Always suggest updating pull request branches
 - ✅ Automatically delete head branches
 
 ## Why These Settings?
 
-| Setting | Trunk-Based Benefit |
-|---------|-------------------|
-| Require linear history | Enforces fast-forward merges, no merge commits |
-| Require up-to-date branches | Forces rebase before merge |
-| Allow rebase merging only | Clean, linear git history |
-| Auto-delete branches | Keeps repo clean, encourages short-lived branches |
+| Setting | Benefit |
+|---------|---------|
+| Require PR before merging | All changes are reviewed before landing on main |
+| Require status checks | CI must pass before merge |
+| Squash or rebase merging | Clean, readable git history on main |
+| Auto-delete branches | Keeps repo clean after PRs merge |
