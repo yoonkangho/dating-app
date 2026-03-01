@@ -2,7 +2,11 @@ package com.kenneth.datingapp.support
 
 import com.kenneth.datingapp.admin.AdminUser
 import com.kenneth.datingapp.admin.AdminRole
+import com.kenneth.datingapp.feedback.*
+import com.kenneth.datingapp.matching.*
 import com.kenneth.datingapp.user.*
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
@@ -96,5 +100,85 @@ object TestFixtures {
         name = name,
         passwordHash = passwordHash,
         role = role
+    )
+
+    fun createOk(
+        id: UUID = UUID.randomUUID(),
+        sender: User,
+        recipient: User,
+        status: OkStatus = OkStatus.PENDING,
+        sentAt: Instant = Instant.now(),
+        expiresAt: Instant = sentAt.plus(Duration.ofDays(7))
+    ) = Ok(
+        id = id,
+        sender = sender,
+        recipient = recipient,
+        status = status,
+        sentAt = sentAt,
+        expiresAt = expiresAt
+    )
+
+    fun createMeeting(
+        id: UUID = UUID.randomUUID(),
+        ok: Ok,
+        woman: User,
+        man: User,
+        status: MeetingStatus = MeetingStatus.PENDING_PROPOSAL
+    ) = Meeting(
+        id = id,
+        ok = ok,
+        woman = woman,
+        man = man,
+        status = status
+    )
+
+    fun createFeedback(
+        id: UUID = UUID.randomUUID(),
+        meeting: Meeting,
+        submittedBy: User,
+        aboutUser: User,
+        meetingHappened: Boolean = true,
+        noShowReason: NoShowReason? = null,
+        wantsContactExchange: Boolean = false
+    ) = Feedback(
+        id = id,
+        meeting = meeting,
+        submittedBy = submittedBy,
+        aboutUser = aboutUser,
+        meetingHappened = meetingHappened,
+        noShowReason = noShowReason,
+        wantsContactExchange = wantsContactExchange
+    )
+
+    fun createRating(
+        id: UUID = UUID.randomUUID(),
+        feedback: Feedback,
+        ratedUser: User,
+        ratedBy: User,
+        looks: Int = 4,
+        attitude: Int = 4
+    ) = Rating(
+        id = id,
+        feedback = feedback,
+        ratedUser = ratedUser,
+        ratedBy = ratedBy,
+        looks = looks,
+        attitude = attitude
+    )
+
+    fun createDispute(
+        id: UUID = UUID.randomUUID(),
+        meeting: Meeting,
+        feedback: Feedback,
+        reportedBy: User,
+        reportedUser: User,
+        status: DisputeStatus = DisputeStatus.OPEN
+    ) = Dispute(
+        id = id,
+        meeting = meeting,
+        feedback = feedback,
+        reportedBy = reportedBy,
+        reportedUser = reportedUser,
+        status = status
     )
 }
