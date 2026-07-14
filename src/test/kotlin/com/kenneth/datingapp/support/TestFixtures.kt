@@ -14,6 +14,12 @@ import java.util.concurrent.atomic.AtomicLong
 object TestFixtures {
     private val counter = AtomicLong(0)
 
+    /** Fixed instant for deterministic time-sensitive test setup. */
+    val FIXED_NOW: Instant = Instant.parse("2026-01-15T10:00:00Z")
+
+    /** Deterministic UUID derived from a name — stable across runs. */
+    fun uuid(name: String): UUID = UUID.nameUUIDFromBytes(name.toByteArray())
+
     fun createUser(
         id: UUID = UUID.randomUUID(),
         email: String = "user${counter.incrementAndGet()}@example.com",
@@ -107,7 +113,7 @@ object TestFixtures {
         sender: User,
         recipient: User,
         status: OkStatus = OkStatus.PENDING,
-        sentAt: Instant = Instant.now(),
+        sentAt: Instant = FIXED_NOW,
         expiresAt: Instant = sentAt.plus(Duration.ofDays(7))
     ) = Ok(
         id = id,
@@ -185,7 +191,7 @@ object TestFixtures {
     fun createMeetingProposal(
         id: UUID = UUID.randomUUID(),
         meeting: Meeting,
-        proposedDate: Instant = Instant.now().plus(Duration.ofDays(7)),
+        proposedDate: Instant = FIXED_NOW.plus(Duration.ofDays(7)),
         proposedLocation: String = "Coffee Shop"
     ) = MeetingProposal(
         id = id,
