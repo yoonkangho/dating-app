@@ -68,43 +68,44 @@ class Ok(
     /**
      * Checks if this ok has expired.
      */
-    fun isExpired(): Boolean = status == OkStatus.PENDING && Instant.now().isAfter(expiresAt)
+    fun isExpired(now: Instant): Boolean =
+        status == OkStatus.PENDING && now.isAfter(expiresAt)
 
     /**
      * Accepts the ok (man responds positively).
      */
-    fun accept() {
+    fun accept(now: Instant) {
         require(status == OkStatus.PENDING) { "Can only accept PENDING ok, current: $status" }
-        require(!isExpired()) { "Cannot accept expired ok" }
+        require(!isExpired(now)) { "Cannot accept expired ok" }
         status = OkStatus.ACCEPTED
-        respondedAt = Instant.now()
-        updatedAt = Instant.now()
+        respondedAt = now
+        updatedAt = now
     }
 
     /**
      * Declines the ok (man responds negatively).
      */
-    fun decline() {
+    fun decline(now: Instant) {
         require(status == OkStatus.PENDING) { "Can only decline PENDING ok, current: $status" }
         status = OkStatus.DECLINED
-        respondedAt = Instant.now()
-        updatedAt = Instant.now()
+        respondedAt = now
+        updatedAt = now
     }
 
     /**
      * Marks ok as expired (called by scheduled job).
      */
-    fun markExpired() {
+    fun markExpired(now: Instant) {
         require(status == OkStatus.PENDING) { "Can only expire PENDING ok, current: $status" }
-        require(isExpired()) { "Ok has not expired yet" }
+        require(isExpired(now)) { "Ok has not expired yet" }
         status = OkStatus.EXPIRED
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Undoes the ok (either party withdraws before meeting is scheduled).
      */
-    fun undo(by: User) {
+    fun undo(by: User, now: Instant) {
         require(status == OkStatus.PENDING || status == OkStatus.ACCEPTED) {
             "Can only undo PENDING or ACCEPTED ok, current: $status"
         }
@@ -113,8 +114,8 @@ class Ok(
         }
         status = OkStatus.UNDONE
         undoneBy = by
-        undoneAt = Instant.now()
-        updatedAt = Instant.now()
+        undoneAt = now
+        updatedAt = now
     }
 
     override fun equals(other: Any?): Boolean {

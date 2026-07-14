@@ -1,7 +1,11 @@
 package com.kenneth.datingapp.support
 
-import com.kenneth.datingapp.admin.AdminUser
+import com.kenneth.datingapp.admin.AdminAction
+import com.kenneth.datingapp.admin.AdminActionType
 import com.kenneth.datingapp.admin.AdminRole
+import com.kenneth.datingapp.admin.AdminTargetType
+import com.kenneth.datingapp.admin.AdminUser
+import com.kenneth.datingapp.admin.UserWarning
 import com.kenneth.datingapp.feedback.*
 import com.kenneth.datingapp.matching.*
 import com.kenneth.datingapp.user.*
@@ -13,6 +17,9 @@ import java.util.concurrent.atomic.AtomicLong
 
 object TestFixtures {
     private val counter = AtomicLong(0)
+
+    /** Fixed instant for deterministic time-sensitive test setup. */
+    val FIXED_NOW: Instant = Instant.parse("2026-01-15T10:00:00Z")
 
     fun createUser(
         id: UUID = UUID.randomUUID(),
@@ -107,7 +114,7 @@ object TestFixtures {
         sender: User,
         recipient: User,
         status: OkStatus = OkStatus.PENDING,
-        sentAt: Instant = Instant.now(),
+        sentAt: Instant = FIXED_NOW,
         expiresAt: Instant = sentAt.plus(Duration.ofDays(7))
     ) = Ok(
         id = id,
@@ -123,13 +130,33 @@ object TestFixtures {
         ok: Ok,
         woman: User,
         man: User,
-        status: MeetingStatus = MeetingStatus.PENDING_PROPOSAL
+        status: MeetingStatus = MeetingStatus.PENDING_PROPOSAL,
+        proposalDeadline: Instant = FIXED_NOW.plus(Meeting.PROPOSAL_DEADLINE_DURATION),
+        finalizationDeadline: Instant? = null,
+        meetingDeadline: Instant = FIXED_NOW.plus(Meeting.MEETING_DEADLINE_DURATION),
+        scheduledAt: Instant? = null,
+        locationName: String? = null,
+        locationAddress: String? = null,
+        isRescheduled: Boolean = false,
+        cancelledBy: User? = null,
+        cancelledAt: Instant? = null,
+        cancellationReason: CancellationReason? = null
     ) = Meeting(
         id = id,
         ok = ok,
         woman = woman,
         man = man,
-        status = status
+        status = status,
+        proposalDeadline = proposalDeadline,
+        finalizationDeadline = finalizationDeadline,
+        meetingDeadline = meetingDeadline,
+        scheduledAt = scheduledAt,
+        locationName = locationName,
+        locationAddress = locationAddress,
+        isRescheduled = isRescheduled,
+        cancelledBy = cancelledBy,
+        cancelledAt = cancelledAt,
+        cancellationReason = cancellationReason
     )
 
     fun createFeedback(
@@ -185,7 +212,7 @@ object TestFixtures {
     fun createMeetingProposal(
         id: UUID = UUID.randomUUID(),
         meeting: Meeting,
-        proposedDate: Instant = Instant.now().plus(Duration.ofDays(7)),
+        proposedDate: Instant = FIXED_NOW.plus(Duration.ofDays(7)),
         proposedLocation: String = "Coffee Shop"
     ) = MeetingProposal(
         id = id,
@@ -206,5 +233,37 @@ object TestFixtures {
         eventType = eventType,
         actor = actor,
         details = details
+    )
+
+    fun createAdminAction(
+        id: UUID = UUID.randomUUID(),
+        admin: AdminUser,
+        actionType: AdminActionType = AdminActionType.USER_WARNED,
+        targetType: AdminTargetType = AdminTargetType.USER,
+        targetId: UUID = UUID.randomUUID(),
+        details: Map<String, Any>? = null
+    ) = AdminAction(
+        id = id,
+        admin = admin,
+        actionType = actionType,
+        targetType = targetType,
+        targetId = targetId,
+        details = details
+    )
+
+    fun createUserWarning(
+        id: UUID = UUID.randomUUID(),
+        user: User,
+        issuedBy: AdminUser,
+        reason: String = "Test warning",
+        relatedDispute: Dispute? = null,
+        relatedFeedback: Feedback? = null
+    ) = UserWarning(
+        id = id,
+        user = user,
+        issuedBy = issuedBy,
+        reason = reason,
+        relatedDispute = relatedDispute,
+        relatedFeedback = relatedFeedback
     )
 }

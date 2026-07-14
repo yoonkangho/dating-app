@@ -54,8 +54,9 @@ class OkRepositoryTest : IntegrationTestBase() {
         val recipient2 = userRepository.save(createUser(status = UserStatus.ACTIVE))
 
         val pastDate = Instant.now().minus(Duration.ofDays(8))
+        val futureDate = Instant.now().plus(Duration.ofDays(1))
         okRepository.save(createOk(sender = sender, recipient = recipient, sentAt = pastDate, expiresAt = pastDate.plus(Duration.ofDays(7))))
-        okRepository.save(createOk(sender = sender, recipient = recipient2)) // not expired
+        okRepository.save(createOk(sender = sender, recipient = recipient2, expiresAt = futureDate)) // not expired
         flushAndClear()
 
         val expired = okRepository.findExpiredPendingOks(Instant.now())
