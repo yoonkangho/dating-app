@@ -42,6 +42,9 @@ bin
 # Claude Code
 .claude/
 
+# Git worktrees
+.worktrees/
+
 # Environment & secrets
 .env
 .env.local
