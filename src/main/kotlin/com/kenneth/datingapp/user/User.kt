@@ -42,78 +42,78 @@ class User(
     /**
      * Marks user as verified and moves to waitlist.
      */
-    fun markVerified() {
+    fun markVerified(now: Instant) {
         require(status == UserStatus.VERIFICATION_PENDING) {
             "Can only verify from VERIFICATION_PENDING status, current: $status"
         }
         status = UserStatus.WAITLISTED
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Releases user from waitlist for admin review.
      */
-    fun releaseFromWaitlist() {
+    fun releaseFromWaitlist(now: Instant) {
         require(status == UserStatus.WAITLISTED) {
             "Can only release from WAITLISTED status, current: $status"
         }
         status = UserStatus.REVIEW_PENDING
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Approves user after admin review.
      */
-    fun approve() {
+    fun approve(now: Instant) {
         require(status == UserStatus.REVIEW_PENDING) {
             "Can only approve from REVIEW_PENDING status, current: $status"
         }
         status = UserStatus.ACTIVE
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Rejects user. User will see "pending" indefinitely.
      */
-    fun reject() {
+    fun reject(now: Instant) {
         require(status == UserStatus.REVIEW_PENDING) {
             "Can only reject from REVIEW_PENDING status, current: $status"
         }
         status = UserStatus.REJECTED
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Bans user.
      */
-    fun ban() {
+    fun ban(now: Instant) {
         require(status == UserStatus.ACTIVE) {
             "Can only ban ACTIVE users, current: $status"
         }
         status = UserStatus.BANNED
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Unbans user (admin action). Returns user to ACTIVE status.
      */
-    fun unban() {
+    fun unban(now: Instant) {
         require(status == UserStatus.BANNED) {
             "Can only unban BANNED users, current: $status"
         }
         status = UserStatus.ACTIVE
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Reactivates a rejected user (admin action). Returns user to ACTIVE status.
      */
-    fun reactivate() {
+    fun reactivate(now: Instant) {
         require(status == UserStatus.REJECTED) {
             "Can only reactivate REJECTED users, current: $status"
         }
         status = UserStatus.ACTIVE
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     override fun equals(other: Any?): Boolean {
