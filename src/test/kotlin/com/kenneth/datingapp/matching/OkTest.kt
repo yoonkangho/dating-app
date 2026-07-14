@@ -286,5 +286,11 @@ class OkTest {
                               status = OkStatus.UNDONE, expiresAt = pastExpiry)
             assertThat(ok.isExpired(FIXED_NOW)).isFalse()
         }
+
+        @Test
+        fun `returns false when PENDING and now equals expiresAt`() {
+            val ok = pendingOk(expiresAt = FIXED_NOW)
+            assertThat(ok.isExpired(FIXED_NOW)).isFalse()
+        }
     }
 }

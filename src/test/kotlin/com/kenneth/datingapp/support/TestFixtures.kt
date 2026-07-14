@@ -21,9 +21,6 @@ object TestFixtures {
     /** Fixed instant for deterministic time-sensitive test setup. */
     val FIXED_NOW: Instant = Instant.parse("2026-01-15T10:00:00Z")
 
-    /** Deterministic UUID derived from a name — stable across runs. */
-    fun uuid(name: String): UUID = UUID.nameUUIDFromBytes(name.toByteArray())
-
     fun createUser(
         id: UUID = UUID.randomUUID(),
         email: String = "user${counter.incrementAndGet()}@example.com",

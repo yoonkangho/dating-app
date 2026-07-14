@@ -108,6 +108,16 @@ class MeetingTest {
         }
 
         @Test
+        fun `throws when selectedDate equals meetingDeadline`() {
+            val deadline = FIXED_NOW.plus(Duration.ofDays(5))
+            val m = meeting(status = MeetingStatus.PENDING_FINALIZATION,
+                            finalizationDeadline = nearFutureFinalizationDeadline,
+                            meetingDeadline = deadline)
+            assertThatThrownBy { m.finalize(FIXED_NOW, deadline, "X", "Y") }
+                .isInstanceOf(IllegalArgumentException::class.java)
+        }
+
+        @Test
         fun `throws when status is PENDING_PROPOSAL`() {
             val m = meeting(status = MeetingStatus.PENDING_PROPOSAL)
             assertThatThrownBy { m.finalize(FIXED_NOW, selectedDate, "X", "Y") }
