@@ -129,13 +129,33 @@ object TestFixtures {
         ok: Ok,
         woman: User,
         man: User,
-        status: MeetingStatus = MeetingStatus.PENDING_PROPOSAL
+        status: MeetingStatus = MeetingStatus.PENDING_PROPOSAL,
+        proposalDeadline: Instant = FIXED_NOW.plus(Meeting.PROPOSAL_DEADLINE_DURATION),
+        finalizationDeadline: Instant? = null,
+        meetingDeadline: Instant = FIXED_NOW.plus(Meeting.MEETING_DEADLINE_DURATION),
+        scheduledAt: Instant? = null,
+        locationName: String? = null,
+        locationAddress: String? = null,
+        isRescheduled: Boolean = false,
+        cancelledBy: User? = null,
+        cancelledAt: Instant? = null,
+        cancellationReason: CancellationReason? = null
     ) = Meeting(
         id = id,
         ok = ok,
         woman = woman,
         man = man,
-        status = status
+        status = status,
+        proposalDeadline = proposalDeadline,
+        finalizationDeadline = finalizationDeadline,
+        meetingDeadline = meetingDeadline,
+        scheduledAt = scheduledAt,
+        locationName = locationName,
+        locationAddress = locationAddress,
+        isRescheduled = isRescheduled,
+        cancelledBy = cancelledBy,
+        cancelledAt = cancelledAt,
+        cancellationReason = cancellationReason
     )
 
     fun createFeedback(
