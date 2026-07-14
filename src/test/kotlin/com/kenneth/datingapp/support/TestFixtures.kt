@@ -1,7 +1,11 @@
 package com.kenneth.datingapp.support
 
-import com.kenneth.datingapp.admin.AdminUser
+import com.kenneth.datingapp.admin.AdminAction
+import com.kenneth.datingapp.admin.AdminActionType
 import com.kenneth.datingapp.admin.AdminRole
+import com.kenneth.datingapp.admin.AdminTargetType
+import com.kenneth.datingapp.admin.AdminUser
+import com.kenneth.datingapp.admin.UserWarning
 import com.kenneth.datingapp.feedback.*
 import com.kenneth.datingapp.matching.*
 import com.kenneth.datingapp.user.*
@@ -232,5 +236,37 @@ object TestFixtures {
         eventType = eventType,
         actor = actor,
         details = details
+    )
+
+    fun createAdminAction(
+        id: UUID = UUID.randomUUID(),
+        admin: AdminUser,
+        actionType: AdminActionType = AdminActionType.USER_WARNED,
+        targetType: AdminTargetType = AdminTargetType.USER,
+        targetId: UUID = UUID.randomUUID(),
+        details: Map<String, Any>? = null
+    ) = AdminAction(
+        id = id,
+        admin = admin,
+        actionType = actionType,
+        targetType = targetType,
+        targetId = targetId,
+        details = details
+    )
+
+    fun createUserWarning(
+        id: UUID = UUID.randomUUID(),
+        user: User,
+        issuedBy: AdminUser,
+        reason: String = "Test warning",
+        relatedDispute: Dispute? = null,
+        relatedFeedback: Feedback? = null
+    ) = UserWarning(
+        id = id,
+        user = user,
+        issuedBy = issuedBy,
+        reason = reason,
+        relatedDispute = relatedDispute,
+        relatedFeedback = relatedFeedback
     )
 }
