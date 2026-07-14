@@ -93,19 +93,19 @@ class Meeting(
     /**
      * Marks that woman has submitted proposals. Sets finalization deadline.
      */
-    fun markProposalSubmitted() {
+    fun markProposalSubmitted(now: Instant) {
         require(status == MeetingStatus.PENDING_PROPOSAL) {
             "Can only submit proposal in PENDING_PROPOSAL status, current: $status"
         }
         status = MeetingStatus.PENDING_FINALIZATION
-        finalizationDeadline = Instant.now().plus(FINALIZATION_DEADLINE_DURATION)
-        updatedAt = Instant.now()
+        finalizationDeadline = now.plus(FINALIZATION_DEADLINE_DURATION)
+        updatedAt = now
     }
 
     /**
      * Finalizes the meeting with selected date and location.
      */
-    fun finalize(selectedDate: Instant, locationName: String, locationAddress: String) {
+    fun finalize(now: Instant, selectedDate: Instant, locationName: String, locationAddress: String) {
         require(status == MeetingStatus.PENDING_FINALIZATION) {
             "Can only finalize in PENDING_FINALIZATION status, current: $status"
         }
@@ -116,69 +116,69 @@ class Meeting(
         scheduledAt = selectedDate
         this.locationName = locationName
         this.locationAddress = locationAddress
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Checks if rescheduling is allowed.
      */
-    fun canReschedule(): Boolean = 
+    fun canReschedule(): Boolean =
         status == MeetingStatus.SCHEDULED && !isRescheduled
 
     /**
      * Initiates a reschedule. Returns meeting to PENDING_PROPOSAL status.
      * Woman must propose new dates, man must finalize again.
      */
-    fun reschedule() {
+    fun reschedule(now: Instant) {
         require(canReschedule()) { "Cannot reschedule: already rescheduled or not in SCHEDULED status" }
         status = MeetingStatus.PENDING_PROPOSAL
-        proposalDeadline = Instant.now().plus(PROPOSAL_DEADLINE_DURATION)
+        proposalDeadline = now.plus(PROPOSAL_DEADLINE_DURATION)
         finalizationDeadline = null
         scheduledAt = null
         locationName = null
         locationAddress = null
         isRescheduled = true
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Cancels the meeting.
      */
-    fun cancel(by: User?, reason: CancellationReason) {
+    fun cancel(now: Instant, by: User?, reason: CancellationReason) {
         require(status != MeetingStatus.COMPLETED && status != MeetingStatus.CANCELLED) {
             "Cannot cancel meeting in $status status"
         }
         status = MeetingStatus.CANCELLED
         cancelledBy = by
-        cancelledAt = Instant.now()
+        cancelledAt = now
         cancellationReason = reason
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Marks meeting as completed.
      */
-    fun complete() {
+    fun complete(now: Instant) {
         require(status == MeetingStatus.SCHEDULED) {
             "Can only complete SCHEDULED meeting, current: $status"
         }
         status = MeetingStatus.COMPLETED
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Checks if proposal deadline has passed.
      */
-    fun isProposalDeadlineMissed(): Boolean =
-        status == MeetingStatus.PENDING_PROPOSAL && Instant.now().isAfter(proposalDeadline)
+    fun isProposalDeadlineMissed(now: Instant): Boolean =
+        status == MeetingStatus.PENDING_PROPOSAL && now.isAfter(proposalDeadline)
 
     /**
      * Checks if finalization deadline has passed.
      */
-    fun isFinalizationDeadlineMissed(): Boolean =
-        status == MeetingStatus.PENDING_FINALIZATION && 
-        finalizationDeadline != null && 
-        Instant.now().isAfter(finalizationDeadline)
+    fun isFinalizationDeadlineMissed(now: Instant): Boolean =
+        status == MeetingStatus.PENDING_FINALIZATION &&
+        finalizationDeadline != null &&
+        now.isAfter(finalizationDeadline)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
