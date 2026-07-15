@@ -1,6 +1,5 @@
 package com.kenneth.datingapp.feedback
 
-import com.kenneth.datingapp.admin.AdminUser
 import com.kenneth.datingapp.matching.Meeting
 import com.kenneth.datingapp.user.User
 import jakarta.persistence.*
@@ -9,8 +8,12 @@ import java.util.UUID
 
 /**
  * Dispute triggered when a user reports the counterparty as no-show.
- * 
+ *
  * If both users report each other as no-show, two separate disputes are created.
+ *
+ * `resolvedByAdminId` stores the resolving admin's UUID rather than a JPA reference
+ * to keep this entity free of a cross-module `@ManyToOne` back into `admin`. The FK
+ * to `admin_users(id)` is enforced at the database level (see V5 migration).
  */
 @Entity
 @Table(
@@ -52,9 +55,8 @@ class Dispute(
     @Column(name = "resolution_notes", columnDefinition = "TEXT")
     var resolutionNotes: String? = null,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "resolved_by")
-    var resolvedBy: AdminUser? = null,
+    @Column(name = "resolved_by")
+    var resolvedByAdminId: UUID? = null,
 
     @Column(name = "resolved_at")
     var resolvedAt: Instant? = null,
@@ -68,42 +70,42 @@ class Dispute(
     /**
      * Marks dispute as under investigation.
      */
-    fun startInvestigation() {
+    fun startInvestigation(now: Instant) {
         require(status == DisputeStatus.OPEN) {
             "Can only start investigation on OPEN dispute, current: $status"
         }
         status = DisputeStatus.INVESTIGATING
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Resolves the dispute.
      */
-    fun resolve(admin: AdminUser, resolution: DisputeResolution, notes: String? = null) {
+    fun resolve(adminId: UUID, resolution: DisputeResolution, now: Instant, notes: String? = null) {
         require(status != DisputeStatus.RESOLVED) {
             "Dispute is already resolved"
         }
         status = DisputeStatus.RESOLVED
         this.resolution = resolution
         this.resolutionNotes = notes
-        this.resolvedBy = admin
-        this.resolvedAt = Instant.now()
-        updatedAt = Instant.now()
+        this.resolvedByAdminId = adminId
+        this.resolvedAt = now
+        updatedAt = now
     }
 
     /**
      * Reopens a resolved dispute.
      */
-    fun reopen() {
+    fun reopen(now: Instant) {
         require(status == DisputeStatus.RESOLVED) {
             "Can only reopen RESOLVED dispute, current: $status"
         }
         status = DisputeStatus.OPEN
         resolution = null
         resolutionNotes = null
-        resolvedBy = null
+        resolvedByAdminId = null
         resolvedAt = null
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     override fun equals(other: Any?): Boolean {

@@ -1,6 +1,5 @@
 package com.kenneth.datingapp.user
 
-import com.kenneth.datingapp.admin.AdminUser
 import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
@@ -9,13 +8,17 @@ import java.util.UUID
 
 /**
  * Unified approval request for all user-initiated changes requiring admin review.
- * 
+ *
  * Request types:
  * - SIGN_UP: New user registration (payload contains all profile fields)
  * - PHOTO_ADD: Adding a new photo (target_id references UserPhoto)
  * - BIO_CHANGE: Updating bio (payload contains old_value and new_value)
- * 
+ *
  * Provides full audit trail of all approval requests and their outcomes.
+ *
+ * `reviewedByAdminId` stores the reviewing admin's UUID rather than a JPA reference
+ * to keep this entity free of a cross-module `@ManyToOne` back into `admin`. The FK
+ * to `admin_users(id)` is enforced at the database level (see V5 migration).
  */
 @Entity
 @Table(
@@ -56,9 +59,8 @@ class ApprovalRequest(
     @Column(nullable = false, columnDefinition = "jsonb")
     val payload: Map<String, Any>,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewed_by")
-    var reviewedBy: AdminUser? = null,
+    @Column(name = "reviewed_by")
+    var reviewedByAdminId: UUID? = null,
 
     @Column(name = "reviewed_at")
     var reviewedAt: Instant? = null,
@@ -75,29 +77,29 @@ class ApprovalRequest(
     /**
      * Approves the request.
      */
-    fun approve(admin: AdminUser, notes: String? = null) {
+    fun approve(adminId: UUID, now: Instant, notes: String? = null) {
         require(status == ApprovalRequestStatus.PENDING) {
             "Can only approve PENDING requests, current: $status"
         }
         status = ApprovalRequestStatus.APPROVED
-        reviewedBy = admin
-        reviewedAt = Instant.now()
+        reviewedByAdminId = adminId
+        reviewedAt = now
         reviewNotes = notes
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     /**
      * Rejects the request.
      */
-    fun reject(admin: AdminUser, notes: String? = null) {
+    fun reject(adminId: UUID, now: Instant, notes: String? = null) {
         require(status == ApprovalRequestStatus.PENDING) {
             "Can only reject PENDING requests, current: $status"
         }
         status = ApprovalRequestStatus.REJECTED
-        reviewedBy = admin
-        reviewedAt = Instant.now()
+        reviewedByAdminId = adminId
+        reviewedAt = now
         reviewNotes = notes
-        updatedAt = Instant.now()
+        updatedAt = now
     }
 
     override fun equals(other: Any?): Boolean {
