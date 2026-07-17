@@ -51,6 +51,10 @@ bin
 *.pem
 *.key
 
+# Personal, per-machine Testcontainers config (e.g., DOCKER_HOST for OrbStack).
+# Testcontainers reads this from the test classpath.
+src/test/resources/testcontainers.properties
+
 # OS files
 .DS_Store
 Thumbs.db
