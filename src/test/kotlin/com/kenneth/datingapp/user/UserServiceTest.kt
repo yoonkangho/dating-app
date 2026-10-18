@@ -1,18 +1,25 @@
 package com.kenneth.datingapp.user
 
+import com.kenneth.datingapp.NotFoundException
+import com.kenneth.datingapp.ValidationException
 import com.kenneth.datingapp.support.TestFixtures.FIXED_NOW
+import com.kenneth.datingapp.support.TestFixtures.createUser
 import com.kenneth.datingapp.user.events.UserRegisteredEvent
+import com.kenneth.datingapp.user.events.UserVerifiedEvent
 import com.kenneth.datingapp.user.internal.UserRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Clock
 import java.time.ZoneOffset
+import java.util.UUID
 
 class UserServiceTest {
 
@@ -137,6 +144,47 @@ class UserServiceTest {
 
             assertThat(result).isInstanceOf(RegistrationResult.PhoneAlreadyExists::class.java)
             verify(exactly = 0) { userRepository.save(any()) }
+        }
+    }
+
+    @Nested
+    inner class MarkVerified {
+
+        @Test
+        fun `transitions user to WAITLISTED and publishes UserVerifiedEvent`() {
+            val user = createUser(status = UserStatus.VERIFICATION_PENDING)
+            every { userRepository.findByIdOrNull(user.id) } returns user
+            every { userRepository.save(any()) } answers { firstArg() }
+
+            val result = service.markVerified(user.id)
+
+            assertThat(result.status).isEqualTo(UserStatus.WAITLISTED)
+            assertThat(result.updatedAt).isEqualTo(FIXED_NOW)
+            verify {
+                eventPublisher.publishEvent(match<UserVerifiedEvent> { it.userId == user.id })
+            }
+        }
+
+        @Test
+        fun `throws NotFoundException when user does not exist`() {
+            val userId = UUID.randomUUID()
+            every { userRepository.findByIdOrNull(userId) } returns null
+
+            assertThatThrownBy { service.markVerified(userId) }
+                .isInstanceOf(NotFoundException::class.java)
+        }
+
+        @Test
+        fun `throws ValidationException when user is not in VERIFICATION_PENDING status`() {
+            val user = createUser(status = UserStatus.ACTIVE)
+            every { userRepository.findByIdOrNull(user.id) } returns user
+
+            assertThatThrownBy { service.markVerified(user.id) }
+                .isInstanceOf(ValidationException::class.java)
+                .hasMessageContaining("VERIFICATION_PENDING")
+
+            verify(exactly = 0) { userRepository.save(any()) }
+            verify(exactly = 0) { eventPublisher.publishEvent(any()) }
         }
     }
 }
