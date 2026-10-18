@@ -47,6 +47,7 @@ dependencies {
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+	testImplementation("io.mockk:mockk:1.14.11")
 	testImplementation("org.springframework.boot:spring-boot-restdocs")
 	testImplementation("org.springframework.boot:spring-boot-starter-cache-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
