@@ -45,6 +45,9 @@ bin
 # Git worktrees
 .worktrees/
 
+# Superpowers subagent-driven-development scratch (progress ledger, briefs, reports)
+.superpowers/
+
 # Environment & secrets
 .env
 .env.local
