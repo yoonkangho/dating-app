@@ -1,7 +1,5 @@
 package com.kenneth.datingapp.user
 
-import com.kenneth.datingapp.NotFoundException
-import com.kenneth.datingapp.ValidationException
 import com.kenneth.datingapp.user.events.UserRegisteredEvent
 import com.kenneth.datingapp.user.events.UserVerifiedEvent
 import com.kenneth.datingapp.user.internal.UserRepository
@@ -52,12 +50,12 @@ class UserService(
     @Transactional
     fun markVerified(userId: UUID): User {
         val user = userRepository.findByIdOrNull(userId)
-            ?: throw NotFoundException("User not found: $userId")
+            ?: throw UserNotFoundException("User not found: $userId")
 
         try {
             user.markVerified(clock.instant())
         } catch (ex: IllegalArgumentException) {
-            throw ValidationException(ex.message ?: "Invalid state transition")
+            throw UserValidationException(ex.message ?: "Invalid state transition")
         }
 
         val saved = userRepository.save(user)

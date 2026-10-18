@@ -1,7 +1,5 @@
 package com.kenneth.datingapp.user
 
-import com.kenneth.datingapp.NotFoundException
-import com.kenneth.datingapp.ValidationException
 import com.kenneth.datingapp.support.TestFixtures.FIXED_NOW
 import com.kenneth.datingapp.support.TestFixtures.createUser
 import com.kenneth.datingapp.user.events.UserRegisteredEvent
@@ -166,21 +164,21 @@ class UserServiceTest {
         }
 
         @Test
-        fun `throws NotFoundException when user does not exist`() {
+        fun `throws UserNotFoundException when user does not exist`() {
             val userId = UUID.randomUUID()
             every { userRepository.findByIdOrNull(userId) } returns null
 
             assertThatThrownBy { service.markVerified(userId) }
-                .isInstanceOf(NotFoundException::class.java)
+                .isInstanceOf(UserNotFoundException::class.java)
         }
 
         @Test
-        fun `throws ValidationException when user is not in VERIFICATION_PENDING status`() {
+        fun `throws UserValidationException when user is not in VERIFICATION_PENDING status`() {
             val user = createUser(status = UserStatus.ACTIVE)
             every { userRepository.findByIdOrNull(user.id) } returns user
 
             assertThatThrownBy { service.markVerified(user.id) }
-                .isInstanceOf(ValidationException::class.java)
+                .isInstanceOf(UserValidationException::class.java)
                 .hasMessageContaining("VERIFICATION_PENDING")
 
             verify(exactly = 0) { userRepository.save(any()) }
