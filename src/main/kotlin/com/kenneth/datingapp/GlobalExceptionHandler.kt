@@ -1,5 +1,7 @@
 package com.kenneth.datingapp
 
+import com.kenneth.datingapp.user.UserNotFoundException
+import com.kenneth.datingapp.user.UserValidationException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -10,6 +12,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @RestControllerAdvice
 class GlobalExceptionHandler {
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+
+    @ExceptionHandler(UserNotFoundException::class)
+    fun handleUserNotFound(ex: UserNotFoundException): ResponseEntity<ErrorResponse> {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ErrorResponse(
+                status = 404,
+                error = "Not Found",
+                message = ex.message ?: "Resource not found"
+            )
+        )
+    }
+
+    @ExceptionHandler(UserValidationException::class)
+    fun handleUserValidation(ex: UserValidationException): ResponseEntity<ErrorResponse> {
+        return ResponseEntity.badRequest().body(
+            ErrorResponse(
+                status = 400,
+                error = "Bad Request",
+                message = ex.message ?: "Validation failed"
+            )
+        )
+    }
 
     @ExceptionHandler(NotFoundException::class)
     fun handleNotFound(ex: NotFoundException): ResponseEntity<ErrorResponse> {

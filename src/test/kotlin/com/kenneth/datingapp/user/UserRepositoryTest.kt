@@ -62,6 +62,19 @@ class UserRepositoryTest : IntegrationTestBase() {
     }
 
     @Test
+    fun `existsByPhone returns true when phone exists`() {
+        userRepository.save(createUser(phone = "010-1234-5678"))
+        flushAndClear()
+
+        assertThat(userRepository.existsByPhone("010-1234-5678")).isTrue()
+    }
+
+    @Test
+    fun `existsByPhone returns false when phone does not exist`() {
+        assertThat(userRepository.existsByPhone("000-0000-0000")).isFalse()
+    }
+
+    @Test
     fun `findByStatus returns only users with matching status`() {
         userRepository.save(createUser(status = UserStatus.ACTIVE))
         userRepository.save(createUser(status = UserStatus.ACTIVE))
